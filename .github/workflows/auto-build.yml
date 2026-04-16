@@ -1,0 +1,91 @@
+name: Auto Build
+
+on:
+  push:
+
+concurrency:
+  group: auto-build
+  cancel-in-progress: false
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+          - name: linux
+            os: ubuntu-latest
+            extension: x86_64
+            app-type: app-image
+            jpackage-flags: ""
+          - name: windows-installer
+            os: windows-latest
+            extension: exe
+            app-type: exe
+            jpackage-flags: "--win-menu --win-shortcut --win-dir-chooser"
+          - name: windows
+            os: windows-latest
+            extension: exe
+            app-type: app-image
+            jpackage-flags: ""
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: .
+          ref: ${{ github.ref }}
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 25
+
+      - name: Verify tools
+        shell: bash
+        run: |
+          java -version
+          test -f pom.xml
+
+      - name: Get Current Version
+        id: version
+        shell: bash
+        run: |
+          VERSION=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)
+          echo "Current Version: $VERSION"
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Build JAR
+        shell: bash
+        run: mvn -B clean package
+
+      - name: Package App
+        shell: bash
+        run: |
+          VERSION=${{ steps.version.outputs.version }}
+          
+          if [ "${{ matrix.os }}" = "windows-latest" ]; then
+            RAW_VERSION=$VERSION
+            VERSION=${RAW_VERSION%-SNAPSHOT}
+          fi
+          
+          JAR=$(ls target/rescount-*.jar | head -n 1)
+          
+          mkdir dist
+
+          jpackage \
+          --input target \
+          --name ResourcenCounter \
+          --main-jar $(basename "$JAR") \
+          --main-class de.whiteflame.rescount.Main \
+          --type ${{ matrix.app-type }} \
+          --dest dist \
+          --app-version $VERSION \
+          ${{ matrix.jpackage-flags }}
+
+      - name: Upload Binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: ResourcenCounter_${{ steps.version.outputs.version }}_${{ matrix.name }}
+          path: dist/*

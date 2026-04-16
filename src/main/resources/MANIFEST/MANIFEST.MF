@@ -1,0 +1,2 @@
+Name: ResourcenCounter
+Main-Class: de.whiteflame.rescount.Main
