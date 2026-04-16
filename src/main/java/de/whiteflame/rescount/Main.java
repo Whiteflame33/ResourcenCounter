@@ -68,7 +68,14 @@ public class Main {
     }
 
     static void load() {
-        Map<String, List<LocalDateTime>> loaded = fileHandler.load(FileConstants.XML_FILE);
+        Map<String, List<LocalDateTime>> loaded = null;
+
+        if (FileConstants.TEXT_FILE.exists()) {
+            loaded = fileHandler.load(FileConstants.TEXT_FILE);
+            FileConstants.TEXT_FILE.delete();
+        } else if (FileConstants.XML_FILE.exists()) {
+            loaded = fileHandler.load(FileConstants.XML_FILE);
+        }
 
         if (loaded != null) {
             entries.clear();
@@ -78,7 +85,7 @@ public class Main {
 
     static void safe() {
         try {
-            fileHandler.save(entries, FileConstants.TEXT_FILE, FileType.TEXT);
+            fileHandler.save(entries, FileConstants.XML_FILE, FileType.XML_SLIM);
             System.out.println("Finished writing!");
         } catch (Exception e) {
             e.printStackTrace();
