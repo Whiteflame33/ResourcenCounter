@@ -1,4 +1,4 @@
-package org.example;
+package de.whiteflame.rescount;
 
 import java.awt.Component;
 import java.io.*;
