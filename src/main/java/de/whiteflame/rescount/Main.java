@@ -3,6 +3,7 @@ package de.whiteflame.rescount;
 import de.whiteflame.rescount.api.io.FileType;
 import de.whiteflame.rescount.io.FileConstants;
 import de.whiteflame.rescount.io.FileHandler;
+import de.whiteflame.rescount.io.impl.BinaryFileImpl;
 import de.whiteflame.rescount.io.impl.TextFileImpl;
 import de.whiteflame.rescount.io.impl.xml.XmlSlimFileImpl;
 import de.whiteflame.rescount.io.impl.xml.XmlVerboseFileImpl;
@@ -24,10 +25,12 @@ public class Main {
         fileHandler.registerReader(FileType.TEXT, new TextFileImpl());
         fileHandler.registerReader(FileType.XML_VERBOSE, new XmlVerboseFileImpl());
         fileHandler.registerReader(FileType.XML_SLIM, new XmlSlimFileImpl());
+        fileHandler.registerReader(FileType.BYTE_1, new BinaryFileImpl());
 
         fileHandler.registerWriter(FileType.TEXT, new TextFileImpl());
         fileHandler.registerWriter(FileType.XML_VERBOSE, new XmlVerboseFileImpl());
         fileHandler.registerWriter(FileType.XML_SLIM, new XmlSlimFileImpl());
+        fileHandler.registerWriter(FileType.BYTE_1, new BinaryFileImpl());
     }
 
     static void main() {
@@ -75,6 +78,9 @@ public class Main {
             FileConstants.TEXT_FILE.delete();
         } else if (FileConstants.XML_FILE.exists()) {
             loaded = fileHandler.load(FileConstants.XML_FILE);
+            FileConstants.XML_FILE.delete();
+        } else if (FileConstants.DATA_FILE.exists()) {
+            loaded = fileHandler.load(FileConstants.DATA_FILE);
         }
 
         if (loaded != null) {
@@ -85,7 +91,7 @@ public class Main {
 
     static void safe() {
         try {
-            fileHandler.save(entries, FileConstants.XML_FILE, FileType.XML_SLIM);
+            fileHandler.save(entries, FileConstants.DATA_FILE, FileType.BYTE_1);
             System.out.println("Finished writing!");
         } catch (Exception e) {
             e.printStackTrace();

@@ -4,6 +4,7 @@ public enum FileType {
     TEXT("txt"),
     XML_VERBOSE("xml"),
     XML_SLIM("xml"),
+    BYTE_1(".data"),
     UNKNOWN(null);
 
     private final String fileExtension;
