@@ -1,6 +1,5 @@
 package de.whiteflame.rescount.io.impl;
 
-import de.whiteflame.rescount.Main;
 import de.whiteflame.rescount.api.io.FileType;
 import de.whiteflame.rescount.api.io.IFileReader;
 import de.whiteflame.rescount.api.io.IFileWriter;
@@ -12,7 +11,6 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.io.Writer;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -50,24 +48,47 @@ public class TextFileImpl implements IFileReader, IFileWriter {
         Map<String, List<LocalDateTime>> map = new LinkedHashMap<>();
 
         try (BufferedReader r = new BufferedReader(new FileReader(file))) {
-            List<String> lines = r.lines().toList();
 
-            if (lines.isEmpty())
-                return map;
+            String line;
+            String currentWord = null;
+            List<LocalDateTime> currentList = null;
+            int expectedCount = -1;
 
-            int count = Integer.parseInt(lines.getFirst().split(TEXT_COUNT_SEPARATOR)[1]);
+            while ((line = r.readLine()) != null) {
+                line = line.trim();
 
-            List<LocalDateTime> list = new ArrayList<>(count);
-            for (int i = 1; i < lines.size(); i++) {
-                var line = lines.get(i);
-
-                if (line == null || line.isBlank())
+                if (line.isEmpty())
                     continue;
 
-                list.add(LocalDateTime.parse(line));
+                if (!line.startsWith(TEXT_COUNT_SEPARATOR) && !line.contains("T")) {
+                    if (currentList != null && expectedCount != -1 && currentList.size() != expectedCount) {
+                        throw new RuntimeException("Count mismatch for " + currentWord);
+                    }
+
+                    currentWord = line;
+                    currentList = new ArrayList<>();
+                    map.put(currentWord, currentList);
+                    expectedCount = -1;
+                    continue;
+                }
+
+                if (line.startsWith(TEXT_COUNT_SEPARATOR)) {
+                    expectedCount = Integer.parseInt(line.substring(TEXT_COUNT_SEPARATOR.length()));
+                    continue;
+                }
+
+                if (currentList == null) {
+                    throw new RuntimeException("Timestamp without word context: " + line);
+                }
+
+                currentList.add(LocalDateTime.parse(line));
             }
 
-            map.put(Main.WORD_RESOURCE, list);
+            if (currentList != null && expectedCount != -1 &&
+                    currentList.size() != expectedCount) {
+                throw new RuntimeException("Count mismatch for " + currentWord);
+            }
+
         } catch (IOException e) {
             e.printStackTrace();
         }
