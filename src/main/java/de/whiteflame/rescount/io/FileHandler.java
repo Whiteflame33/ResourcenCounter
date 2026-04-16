@@ -62,6 +62,9 @@ public final class FileHandler {
         if (file.getName().endsWith(FileType.TEXT.getFileExtension()))
             return FileType.TEXT;
 
+        if (file.getName().endsWith(FileType.BYTE_1.getFileExtension()))
+            return FileType.BYTE_1;
+
         try {
             var builder = DocumentBuilderFactory.newInstance().newDocumentBuilder();
             var doc = builder.parse(file);

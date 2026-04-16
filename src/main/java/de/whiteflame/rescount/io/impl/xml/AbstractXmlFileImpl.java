@@ -1,7 +1,9 @@
 package de.whiteflame.rescount.io.impl.xml;
 
+import de.whiteflame.rescount.TimestampGrouper;
 import de.whiteflame.rescount.api.io.IFileReader;
 import de.whiteflame.rescount.api.io.IFileWriter;
+import de.whiteflame.rescount.api.model.GroupedDay;
 import de.whiteflame.rescount.io.impl.xml.model.XmlModel;
 import de.whiteflame.rescount.io.impl.xml.model.XmlModelDay;
 import de.whiteflame.rescount.io.impl.xml.model.XmlModelHour;
@@ -62,76 +64,31 @@ public abstract sealed class AbstractXmlFileImpl implements IFileReader, IFileWr
     protected abstract void constructDocument(Document doc, XmlModel model);
 
     protected XmlModelWord getXmlModelWord(String word, List<LocalDateTime> timestamps) {
-        Set<GroupedDay> groupedDays = new LinkedHashSet<>();
-
-        for (var timestamp : timestamps) {
-
-            String day = timestamp.toLocalDate().toString();
-            String hour = "%02d".formatted(timestamp.getHour());
-            String time = "%02d:%02d:%03d".formatted(
-                    timestamp.getMinute(),
-                    timestamp.getSecond(),
-                    timestamp.getNano() / 1_000_000
-            );
-
-            GroupedDay dayObj = findOrCreateDay(groupedDays, day);
-
-            GroupedHour hourObj = findOrCreateHour(dayObj.groupedHours(), hour);
-
-            hourObj.times().add(new GroupedTime(time));
-        }
+        List<GroupedDay> groupedDays = TimestampGrouper.group(timestamps);
 
         Set<XmlModelDay> modelDays = getXmlModelDays(groupedDays);
 
         return new XmlModelWord(word, timestamps.size(), modelDays);
     }
 
-    private static Set<XmlModelDay> getXmlModelDays(Set<GroupedDay> groupedDays) {
+    private static Set<XmlModelDay> getXmlModelDays(List<GroupedDay> groupedDays) {
         Set<XmlModelDay> modelDays = new LinkedHashSet<>();
 
         for (var dayEntry : groupedDays) {
             Set<XmlModelHour> modelHours = new LinkedHashSet<>();
 
-            for (var hourEntry : dayEntry.groupedHours()) {
+            for (var hourEntry : dayEntry.hours()) {
                 Set<XmlModelTime> modelTimes = new LinkedHashSet<>();
 
                 for (var timeEntry : hourEntry.times()) {
-                    modelTimes.add(new XmlModelTime(timeEntry.time()));
+                    modelTimes.add(new XmlModelTime(String.valueOf(timeEntry)));
                 }
 
-                modelHours.add(new XmlModelHour(hourEntry.hour(), modelTimes));
+                modelHours.add(new XmlModelHour(String.valueOf(hourEntry.hour()), modelTimes));
             }
 
-            modelDays.add(new XmlModelDay(dayEntry.day(), modelHours));
+            modelDays.add(new XmlModelDay(String.valueOf(dayEntry.day()), modelHours));
         }
         return modelDays;
     }
-
-    private static GroupedDay findOrCreateDay(Set<GroupedDay> groupedDays, String day) {
-        for (var d : groupedDays) {
-            if (d.day().equals(day))
-                return d;
-        }
-
-        GroupedDay newDay = new GroupedDay(day, new LinkedHashSet<>());
-        groupedDays.add(newDay);
-        return newDay;
-    }
-
-    private static GroupedHour findOrCreateHour(Set<GroupedHour> groupedHours, String hour) {
-        for (var d : groupedHours) {
-            if (d.hour().equals(hour))
-                return d;
-        }
-
-        GroupedHour newDay = new GroupedHour(hour, new LinkedHashSet<>());
-        groupedHours.add(newDay);
-        return newDay;
-    }
-
-    private record GroupedDay(String day, Set<GroupedHour> groupedHours) {}
-
-    private record GroupedHour(String hour, Set<GroupedTime> times) {}
-
-    private record GroupedTime(String time) {}
 }
