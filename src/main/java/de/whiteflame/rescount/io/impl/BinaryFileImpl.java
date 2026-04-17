@@ -24,7 +24,7 @@ public final class BinaryFileImpl implements IFileReader, IFileWriter {
 
     @Override
     public FileType getFileType() {
-        return null;
+        return FileType.BYTE_1;
     }
 
     @Override
@@ -41,32 +41,39 @@ public final class BinaryFileImpl implements IFileReader, IFileWriter {
                 var grouped = TimestampGrouper.group(entry.getValue());
                 
                 out.writeInt(grouped.size());
-                
-                for (var day : grouped) {
-                    out.writeInt(day.day());
-                    
-                    out.writeByte(day.hours().size());
-                    
-                    for (var hour : day.hours()) {
-                        out.writeByte(hour.hour());
-                        out.writeInt(hour.times().size());
-                        
-                        var it = hour.times().iterator();
 
-                        int base = it.next();
-                        out.writeInt(base);
+                for (var year : grouped) {
+                    out.writeShort(year.year());
 
-                        int prev = base;
+                    out.writeShort(year.days().size());
 
-                        while (it.hasNext()) {
-                            int current = it.next();
-                            int delta = current - prev;
+                    for (var day : year.days()) {
+                        out.writeByte(day.day());
 
-                            out.writeInt(delta);
-                            prev = current;
+                        out.writeByte(day.hours().size());
+
+                        for (var hour : day.hours()) {
+                            out.writeByte(hour.hour());
+                            out.writeInt(hour.times().size());
+
+                            var it = hour.times().iterator();
+
+                            int base = it.next();
+                            out.writeInt(base);
+
+                            int prev = base;
+
+                            while (it.hasNext()) {
+                                int current = it.next();
+                                int delta = current - prev;
+
+                                out.writeInt(delta);
+                                prev = current;
+                            }
                         }
                     }
                 }
+
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -79,10 +86,7 @@ public final class BinaryFileImpl implements IFileReader, IFileWriter {
 
         try (var in = new DataInputStream(
                 new BufferedInputStream(new FileInputStream(file)))) {
-
-            int magic = in.readInt();
-            if (magic != MAGIC_BYTES)
-                throw new RuntimeException("Invalid file format");
+            in.skipBytes(Integer.BYTES);
 
             int wordCount = in.readInt();
 
@@ -129,6 +133,18 @@ public final class BinaryFileImpl implements IFileReader, IFileWriter {
         }
 
         return map;
+    }
+
+    @Override
+    public boolean isType(File file) {
+        try (var in = new DataInputStream(
+                new BufferedInputStream(new FileInputStream(file)))) {
+            return in.readInt() == MAGIC_BYTES;
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        return false;
     }
 
     private static String formatDay(int day) {

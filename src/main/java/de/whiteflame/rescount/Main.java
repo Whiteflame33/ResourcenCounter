@@ -4,6 +4,7 @@ import de.whiteflame.rescount.api.io.FileType;
 import de.whiteflame.rescount.io.FileConstants;
 import de.whiteflame.rescount.io.FileHandler;
 import de.whiteflame.rescount.io.impl.BinaryFileImpl;
+import de.whiteflame.rescount.io.impl.CompressedBinaryFileImpl;
 import de.whiteflame.rescount.io.impl.TextFileImpl;
 import de.whiteflame.rescount.io.impl.xml.XmlSlimFileImpl;
 import de.whiteflame.rescount.io.impl.xml.XmlVerboseFileImpl;
@@ -26,11 +27,13 @@ public class Main {
         fileHandler.registerReader(FileType.XML_VERBOSE, new XmlVerboseFileImpl());
         fileHandler.registerReader(FileType.XML_SLIM, new XmlSlimFileImpl());
         fileHandler.registerReader(FileType.BYTE_1, new BinaryFileImpl());
+        fileHandler.registerReader(FileType.BYTE_2, new CompressedBinaryFileImpl());
 
         fileHandler.registerWriter(FileType.TEXT, new TextFileImpl());
         fileHandler.registerWriter(FileType.XML_VERBOSE, new XmlVerboseFileImpl());
         fileHandler.registerWriter(FileType.XML_SLIM, new XmlSlimFileImpl());
         fileHandler.registerWriter(FileType.BYTE_1, new BinaryFileImpl());
+        fileHandler.registerWriter(FileType.BYTE_2, new CompressedBinaryFileImpl());
     }
 
     static void main() {
@@ -74,13 +77,23 @@ public class Main {
         Map<String, List<LocalDateTime>> loaded = null;
 
         if (FileConstants.TEXT_FILE.exists()) {
+            System.out.println("Loading text file");
             loaded = fileHandler.load(FileConstants.TEXT_FILE);
-            FileConstants.TEXT_FILE.delete();
+            //System.out.println("Deleting text file");
+            //FileConstants.TEXT_FILE.deleteOnExit();
         } else if (FileConstants.XML_FILE.exists()) {
+            System.out.println("Loading xml file");
             loaded = fileHandler.load(FileConstants.XML_FILE);
-            FileConstants.XML_FILE.delete();
+            //System.out.println("Deleting xml file");
+            //FileConstants.XML_FILE.deleteOnExit();
         } else if (FileConstants.DATA_FILE.exists()) {
+            System.out.println("Loading simple binary file");
             loaded = fileHandler.load(FileConstants.DATA_FILE);
+            //System.out.println("Deleting simple binary file");
+            //FileConstants.DATA_FILE.deleteOnExit();
+        } else if (FileConstants.COMPRESSED_DATA_FILE.exists()) {
+            System.out.println("Loading compressed binary file");
+            loaded = fileHandler.load(FileConstants.COMPRESSED_DATA_FILE);
         }
 
         if (loaded != null) {
@@ -91,7 +104,10 @@ public class Main {
 
     static void safe() {
         try {
+            fileHandler.save(entries, FileConstants.TEXT_FILE, FileType.TEXT);
+            fileHandler.save(entries, FileConstants.XML_FILE, FileType.XML_SLIM);
             fileHandler.save(entries, FileConstants.DATA_FILE, FileType.BYTE_1);
+            fileHandler.save(entries, FileConstants.COMPRESSED_DATA_FILE, FileType.BYTE_2);
             System.out.println("Finished writing!");
         } catch (Exception e) {
             e.printStackTrace();

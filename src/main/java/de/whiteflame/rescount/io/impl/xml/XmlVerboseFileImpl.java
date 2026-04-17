@@ -11,7 +11,9 @@ import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
 
 import javax.xml.parsers.DocumentBuilderFactory;
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileReader;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -90,6 +92,11 @@ public final class XmlVerboseFileImpl extends AbstractXmlFileImpl {
         }
 
         return map;
+    }
+
+    @Override
+    public boolean isType(File file) {
+        return super.isType(file, TAG_FILE);
     }
 
     @Override

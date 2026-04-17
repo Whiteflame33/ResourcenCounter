@@ -112,6 +112,11 @@ public final class XmlSlimFileImpl extends AbstractXmlFileImpl {
     }
 
     @Override
+    public boolean isType(File file) {
+        return super.isType(file, TAG_FILE);
+    }
+
+    @Override
     protected void constructDocument(Document doc, XmlModel model) {
         Element root = doc.createElement(TAG_FILE);
 

@@ -95,4 +95,11 @@ public class TextFileImpl implements IFileReader, IFileWriter {
 
         return map;
     }
+
+    @Override
+    public boolean isType(File file) {
+        if (file == null)
+            return false;
+        return file.getName().endsWith(getFileType().getFileExtension());
+    }
 }

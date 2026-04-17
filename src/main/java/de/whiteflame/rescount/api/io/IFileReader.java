@@ -9,4 +9,6 @@ public interface IFileReader {
     FileType getFileType();
 
     Map<String, List<LocalDateTime>> readFile(File file);
+
+    boolean isType(File file);
 }
