@@ -4,6 +4,7 @@ import de.whiteflame.rescount.TimestampGrouper;
 import de.whiteflame.rescount.api.io.IFileReader;
 import de.whiteflame.rescount.api.io.IFileWriter;
 import de.whiteflame.rescount.api.model.GroupedDay;
+import de.whiteflame.rescount.api.model.GroupedYear;
 import de.whiteflame.rescount.io.impl.xml.model.XmlModel;
 import de.whiteflame.rescount.io.impl.xml.model.XmlModelDay;
 import de.whiteflame.rescount.io.impl.xml.model.XmlModelHour;
@@ -64,7 +65,7 @@ public abstract sealed class AbstractXmlFileImpl implements IFileReader, IFileWr
     protected abstract void constructDocument(Document doc, XmlModel model);
 
     protected XmlModelWord getXmlModelWord(String word, List<LocalDateTime> timestamps) {
-        List<GroupedDay> groupedDays = TimestampGrouper.group(timestamps);
+        List<GroupedDay> groupedDays = TimestampGrouper.groupByDay(timestamps);
 
         Set<XmlModelDay> modelDays = getXmlModelDays(groupedDays);
 
@@ -90,5 +91,21 @@ public abstract sealed class AbstractXmlFileImpl implements IFileReader, IFileWr
             modelDays.add(new XmlModelDay(String.valueOf(dayEntry.day()), modelHours));
         }
         return modelDays;
+    }
+
+    protected boolean isType(File file, String rootTag) {
+        if (!file.getName().endsWith(getFileType().getFileExtension()))
+            return false;
+
+        try {
+            var builder = DocumentBuilderFactory.newInstance().newDocumentBuilder();
+            Document doc = builder.parse(file);
+
+            return doc.getDocumentElement().getTagName().equals(rootTag);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        return false;
     }
 }

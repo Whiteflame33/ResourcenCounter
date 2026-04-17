@@ -12,5 +12,6 @@ public final class FileConstants {
     public static final File
             TEXT_FILE = new File(F_USER_HOME+ "wissmann.txt"),
             XML_FILE = new File(F_USER_HOME + "wissmann.xml"),
-            DATA_FILE = new File(F_USER_HOME + "wissmann.data");
+            DATA_FILE = new File(F_USER_HOME + "wissmann.data"),
+            COMPRESSED_DATA_FILE = new File(F_USER_HOME + "wissmann.z.data");
 }

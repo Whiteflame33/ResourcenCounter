@@ -4,10 +4,7 @@ import de.whiteflame.rescount.api.io.FileType;
 import de.whiteflame.rescount.api.io.IFileReader;
 import de.whiteflame.rescount.api.io.IFileWriter;
 
-import javax.xml.parsers.DocumentBuilderFactory;
-import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileReader;
 import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.HashMap;
@@ -36,12 +33,18 @@ public final class FileHandler {
     }
 
     public Map<String, List<LocalDateTime>> load(File file) {
+        System.out.println("Detecting type");
         FileType type = detectFileType(file);
+        System.out.println("Detected type " + type);
 
         if (type == FileType.UNKNOWN)
             return null;
 
-        return fileReaders.get(type).readFile(file);
+        var reader = fileReaders.get(type);
+        if (reader == null)
+            return null;
+
+        return reader.readFile(file);
     }
 
     public void save(Map<String, List<LocalDateTime>> mapping, File file, FileType fileType) {
@@ -59,22 +62,10 @@ public final class FileHandler {
     }
 
     private FileType detectFileType(File file) {
-        if (file.getName().endsWith(FileType.TEXT.getFileExtension()))
-            return FileType.TEXT;
-
-        if (file.getName().endsWith(FileType.BYTE_1.getFileExtension()))
-            return FileType.BYTE_1;
-
-        try {
-            var builder = DocumentBuilderFactory.newInstance().newDocumentBuilder();
-            var doc = builder.parse(file);
-
-            if (doc.getDocumentElement().getTagName().equals("file"))
-                return FileType.XML_VERBOSE;
-            else if (doc.getDocumentElement().getTagName().equals("f"))
-                return FileType.XML_SLIM;
-        } catch (Exception e) {
-            e.printStackTrace();
+        for (var reader : fileReaders.values()) {
+            System.out.println("Checking if " + reader.getClass().getSimpleName() + " can load file");
+            if (reader.isType(file))
+                return reader.getFileType();
         }
 
         return FileType.UNKNOWN;
