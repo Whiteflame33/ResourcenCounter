@@ -1,6 +1,8 @@
 package de.whiteflame.rescount.io.impl.xml;
 
 import de.whiteflame.rescount.api.io.FileType;
+import de.whiteflame.rescount.api.log.ILogger;
+import de.whiteflame.rescount.api.log.LoggerFactory;
 import de.whiteflame.rescount.io.impl.xml.model.XmlModel;
 import de.whiteflame.rescount.io.impl.xml.model.XmlModelDay;
 import de.whiteflame.rescount.io.impl.xml.model.XmlModelHour;
@@ -19,6 +21,8 @@ import java.util.List;
 import java.util.Map;
 
 public final class XmlSlimFileImpl extends AbstractXmlFileImpl {
+    private static final ILogger LOGGER = LoggerFactory.getLogger(XmlSlimFileImpl.class);
+
     private static final String
                     TAG_FILE  = "f",
                     TAG_WORD  = "w",
@@ -34,11 +38,13 @@ public final class XmlSlimFileImpl extends AbstractXmlFileImpl {
 
     @Override
     public void writeFile(File file, Map<String, List<LocalDateTime>> groupedTimestamps) {
+        LOGGER.debug("Starting Slim XML write to: {}", file.getName());
         super.writeFile(file, groupedTimestamps, false);
     }
 
     @Override
     public Map<String, List<LocalDateTime>> readFile(File file) {
+        LOGGER.debug("Parsing Slim XML file: {}", file.getAbsolutePath());
         Map<String, List<LocalDateTime>> map = new LinkedHashMap<>();
 
         try {
@@ -52,8 +58,14 @@ public final class XmlSlimFileImpl extends AbstractXmlFileImpl {
                 String word = wordEl.getAttribute(ATTRIBUTE_VALUE);
                 String count = wordEl.getAttribute(ATTRIBUTE_COUNT);
 
-                List<LocalDateTime> timestamps = new ArrayList<>(Integer.parseInt(count));
+                int expectedCount = 0;
+                try {
+                    expectedCount = Integer.parseInt(count);
+                } catch (NumberFormatException e) {
+                    LOGGER.warn("Invalid count attribute for word '{}' in file {}", word, file.getName());
+                }
 
+                List<LocalDateTime> timestamps = new ArrayList<>(expectedCount);
                 NodeList days = wordEl.getElementsByTagName(TAG_DAY);
 
                 for (int d = 0; d < days.getLength(); d++) {
@@ -74,38 +86,51 @@ public final class XmlSlimFileImpl extends AbstractXmlFileImpl {
                         Integer prev = null;
 
                         for (int t = 0; t < parts.length; t++) {
-                            var time = parts[t].trim();
+                            try {
+                                var time = parts[t].trim();
 
-                            int value;
-                            int parsedTime = Integer.parseInt(time);
+                                int value;
+                                int parsedTime = Integer.parseInt(time);
 
-                            if (t == 0)
-                                value = parsedTime;
-                            else
-                                value = prev + parsedTime;
+                                if (t == 0)
+                                    value = parsedTime;
+                                else
+                                    value = prev + parsedTime;
 
-                            prev = value;
+                                prev = value;
 
-                            String padded = String.format("%07d", value);
-                            String formatted =
-                                            padded.substring(0, 2) + ":" +
-                                            padded.substring(2, 4) + ":" +
-                                            padded.substring(4);
+                                String padded = String.format("%07d", value);
+                                String formatted =
+                                        padded.substring(0, 2) + ":" +
+                                                padded.substring(2, 4) + ":" +
+                                                padded.substring(4);
 
-                            timestamps.add(
-                                    LocalDateTime.parse(
-                                            "%s %s:%s".formatted(day, hour, formatted),
-                                            DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss:SSS")
-                                    )
-                            );
+                                timestamps.add(
+                                        LocalDateTime.parse(
+                                                "%s %s:%s".formatted(day, hour, formatted),
+                                                DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss:SSS")
+                                        )
+                                );
+                            } catch (Exception e) {
+                                LOGGER.warn("Delta-decoding error in file {} at word '{}', day {}, hour {}. Entry index: {}",
+                                        file.getName(), word, day, hour, t);
+                            }
                         }
                     }
                 }
 
+                if (timestamps.size() != expectedCount) {
+                    LOGGER.warn("Integrity check failed for word '{}': Expected {} timestamps, Actual {}",
+                            word, expectedCount, timestamps.size());
+                }
+
                 map.put(word, timestamps);
+                LOGGER.trace("Loaded slim word '{}' ({} entries)", word, timestamps.size());
             }
+
+            LOGGER.info("Successfully loaded {} categories from Slim XML", map.size());
         } catch (Exception e) {
-            e.printStackTrace();
+            LOGGER.error("Failed to parse Slim XML: {}", file.getAbsolutePath(), e);
         }
 
         return map;
@@ -118,6 +143,7 @@ public final class XmlSlimFileImpl extends AbstractXmlFileImpl {
 
     @Override
     protected void constructDocument(Document doc, XmlModel model) {
+        LOGGER.trace("Constructing Slim XML DOM with delta-encoded time strings.");
         Element root = doc.createElement(TAG_FILE);
 
         for (XmlModelWord m : model.words()) {

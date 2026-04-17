@@ -1,6 +1,8 @@
 package de.whiteflame.rescount;
 
 import de.whiteflame.rescount.api.io.FileType;
+import de.whiteflame.rescount.api.log.ILogger;
+import de.whiteflame.rescount.api.log.LoggerFactory;
 import de.whiteflame.rescount.io.FileConstants;
 import de.whiteflame.rescount.io.FileHandler;
 import de.whiteflame.rescount.io.impl.BinaryFileImpl;
@@ -8,6 +10,7 @@ import de.whiteflame.rescount.io.impl.CompressedBinaryFileImpl;
 import de.whiteflame.rescount.io.impl.TextFileImpl;
 import de.whiteflame.rescount.io.impl.xml.XmlSlimFileImpl;
 import de.whiteflame.rescount.io.impl.xml.XmlVerboseFileImpl;
+import de.whiteflame.rescount.log.ConsoleLogger;
 
 import java.io.*;
 import java.time.LocalDateTime;
@@ -17,12 +20,17 @@ import javax.swing.*;
 public class Main {
     public static final String WORD_RESOURCE = "Räsorße";
 
+    private static ILogger LOGGER;
+
     static int counter = 0;
     static Map<String, List<LocalDateTime>> entries = new LinkedHashMap<>();
 
     static FileHandler fileHandler = new FileHandler();
 
     static {
+        LoggerFactory.setLoggerInstance(ConsoleLogger.class);
+        LOGGER = LoggerFactory.getLogger(Main.class);
+
         fileHandler.registerReader(FileType.TEXT, new TextFileImpl());
         fileHandler.registerReader(FileType.XML_VERBOSE, new XmlVerboseFileImpl());
         fileHandler.registerReader(FileType.XML_SLIM, new XmlSlimFileImpl());
@@ -74,43 +82,44 @@ public class Main {
     }
 
     static void load() {
+        LOGGER.info("Trying to load existing file");
+
         Map<String, List<LocalDateTime>> loaded = null;
 
         if (FileConstants.TEXT_FILE.exists()) {
-            System.out.println("Loading text file");
+            LOGGER.info("Found text file. Loading...");
             loaded = fileHandler.load(FileConstants.TEXT_FILE);
-            //System.out.println("Deleting text file");
-            //FileConstants.TEXT_FILE.deleteOnExit();
+            LOGGER.info("Deleting text file. Migrating...");
+            FileConstants.TEXT_FILE.deleteOnExit();
         } else if (FileConstants.XML_FILE.exists()) {
-            System.out.println("Loading xml file");
+            LOGGER.info("Found xml file. Loading...");
             loaded = fileHandler.load(FileConstants.XML_FILE);
-            //System.out.println("Deleting xml file");
-            //FileConstants.XML_FILE.deleteOnExit();
+            LOGGER.info("Deleting xml file. Migrating...");
+            FileConstants.XML_FILE.deleteOnExit();
         } else if (FileConstants.DATA_FILE.exists()) {
-            System.out.println("Loading simple binary file");
+            LOGGER.info("Found simple binary file. Loading...");
             loaded = fileHandler.load(FileConstants.DATA_FILE);
-            //System.out.println("Deleting simple binary file");
-            //FileConstants.DATA_FILE.deleteOnExit();
+            LOGGER.info("Deleting simple binary file. Migrating...");
+            FileConstants.DATA_FILE.deleteOnExit();
         } else if (FileConstants.COMPRESSED_DATA_FILE.exists()) {
-            System.out.println("Loading compressed binary file");
+            LOGGER.info("Found compressed binary file. Loading...");
             loaded = fileHandler.load(FileConstants.COMPRESSED_DATA_FILE);
         }
 
         if (loaded != null) {
+            LOGGER.info("Initializing loaded entries");
             entries.clear();
             entries.putAll(loaded);
         }
     }
 
     static void safe() {
+        LOGGER.info("Trying to save to compressed binary file...");
         try {
-            fileHandler.save(entries, FileConstants.TEXT_FILE, FileType.TEXT);
-            fileHandler.save(entries, FileConstants.XML_FILE, FileType.XML_SLIM);
-            fileHandler.save(entries, FileConstants.DATA_FILE, FileType.BYTE_1);
             fileHandler.save(entries, FileConstants.COMPRESSED_DATA_FILE, FileType.BYTE_2);
-            System.out.println("Finished writing!");
+            LOGGER.info("Done saving to compressed binary file.");
         } catch (Exception e) {
-            e.printStackTrace();
+            LOGGER.error("Failed to save to compressed binary file", e);
         }
     }
 }
