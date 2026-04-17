@@ -3,6 +3,8 @@ package de.whiteflame.rescount.io;
 import de.whiteflame.rescount.api.io.FileType;
 import de.whiteflame.rescount.api.io.IFileReader;
 import de.whiteflame.rescount.api.io.IFileWriter;
+import de.whiteflame.rescount.api.log.ILogger;
+import de.whiteflame.rescount.api.log.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
@@ -12,6 +14,8 @@ import java.util.List;
 import java.util.Map;
 
 public final class FileHandler {
+    private static final ILogger LOGGER = LoggerFactory.getLogger(FileHandler.class);
+
     private final Map<FileType, IFileReader> fileReaders;
     private final Map<FileType, IFileWriter> fileWriters;
 
@@ -21,51 +25,76 @@ public final class FileHandler {
     }
 
     public void registerReader(FileType fileType, IFileReader reader) {
-        if (fileReaders.containsKey(fileType))
+        if (fileReaders.containsKey(fileType)) {
+            LOGGER.warn("Reader for file type {} is already registered.", fileType);
             return;
+        }
+        LOGGER.info("Registering reader for file type {}", fileType);
         fileReaders.put(fileType, reader);
     }
 
     public void registerWriter(FileType fileType, IFileWriter writer) {
-        if (fileWriters.containsKey(fileType))
+        if (fileWriters.containsKey(fileType)) {
+            LOGGER.warn("Writer for file type {} is already registered.", fileType);
             return;
+        }
+        LOGGER.info("Registering writer for file type {}", fileType);
         fileWriters.put(fileType, writer);
     }
 
     public Map<String, List<LocalDateTime>> load(File file) {
-        System.out.println("Detecting type");
+        LOGGER.info("Loading file {}", file);
         FileType type = detectFileType(file);
-        System.out.println("Detected type " + type);
+        LOGGER.info("Detected file type {}", type);
 
-        if (type == FileType.UNKNOWN)
+        if (type == FileType.UNKNOWN) {
+            LOGGER.warn("File type {} is not supported.", type);
             return null;
+        }
 
         var reader = fileReaders.get(type);
-        if (reader == null)
+        if (reader == null) {
+            LOGGER.warn("No reader configured for file type {}.", type);
             return null;
+        }
 
         return reader.readFile(file);
     }
 
     public void save(Map<String, List<LocalDateTime>> mapping, File file, FileType fileType) {
-        if (fileType == FileType.UNKNOWN)
-            fileType = FileType.TEXT;
+        LOGGER.info("Saving file {}", file);
 
-        try {
-            if (!file.exists())
-                file.createNewFile();
-        } catch (IOException e) {
-            e.printStackTrace();
+        if (fileType == FileType.UNKNOWN) {
+            LOGGER.warn("File type {} is not supported. Defaulting to {}.", fileType, FileType.TEXT);
+            fileType = FileType.TEXT;
         }
 
-        fileWriters.get(fileType).writeFile(file, mapping);
+        try {
+            if (!file.exists()) {
+                file.createNewFile();
+                LOGGER.info("Creating file {}", file);
+            }
+        } catch (IOException e) {
+            LOGGER.error("Failed to save file {}", file, e);
+            return;
+        }
+
+        var writer = fileWriters.get(fileType);
+        if (writer == null) {
+            LOGGER.warn("No writer configured for file type {}.", fileType);
+            return;
+        }
+
+        writer.writeFile(file, mapping);
     }
 
     private FileType detectFileType(File file) {
         for (var reader : fileReaders.values()) {
-            System.out.println("Checking if " + reader.getClass().getSimpleName() + " can load file");
-            if (reader.isType(file))
+            LOGGER.debug("Checking if {} can load file {}", reader.getClass().getSimpleName(), file);
+            if (reader.isType(file)) {
+                LOGGER.debug("Reader {} can load file {}", reader.getClass().getSimpleName(), file);
                 return reader.getFileType();
+            }
         }
 
         return FileType.UNKNOWN;

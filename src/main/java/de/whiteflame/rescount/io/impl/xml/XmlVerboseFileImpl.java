@@ -1,6 +1,8 @@
 package de.whiteflame.rescount.io.impl.xml;
 
 import de.whiteflame.rescount.api.io.FileType;
+import de.whiteflame.rescount.api.log.ILogger;
+import de.whiteflame.rescount.api.log.LoggerFactory;
 import de.whiteflame.rescount.io.impl.xml.model.XmlModel;
 import de.whiteflame.rescount.io.impl.xml.model.XmlModelDay;
 import de.whiteflame.rescount.io.impl.xml.model.XmlModelHour;
@@ -22,6 +24,8 @@ import java.util.List;
 import java.util.Map;
 
 public final class XmlVerboseFileImpl extends AbstractXmlFileImpl {
+    private static final ILogger LOGGER = LoggerFactory.getLogger(XmlVerboseFileImpl.class);
+
     private static final String
                     TAG_FILE  = "file",
                     TAG_WORD  = "word",
@@ -38,11 +42,13 @@ public final class XmlVerboseFileImpl extends AbstractXmlFileImpl {
 
     @Override
     public void writeFile(File file, Map<String, List<LocalDateTime>> groupedTimestamps) {
+        LOGGER.debug("Starting Verbose XML write to {}", file.getAbsoluteFile());
         super.writeFile(file, groupedTimestamps, true);
     }
 
     @Override
     public Map<String, List<LocalDateTime>> readFile(File file) {
+        LOGGER.debug("Parsing Verbose XML file: {}", file.getAbsoluteFile());
         Map<String, List<LocalDateTime>> map = new LinkedHashMap<>();
 
         try {
@@ -50,6 +56,8 @@ public final class XmlVerboseFileImpl extends AbstractXmlFileImpl {
             Document doc = builder.parse(file);
 
             NodeList words = doc.getElementsByTagName(TAG_WORD);
+            LOGGER.trace("Found {} <{}> elements in file.", words.getLength(), TAG_WORD);
+
 
             for (int i = 0; i < words.getLength(); i++) {
                 Element wordEl = (Element) words.item(i);
@@ -75,20 +83,28 @@ public final class XmlVerboseFileImpl extends AbstractXmlFileImpl {
                             Element timeEl = (Element) times.item(t);
                             String time = timeEl.getAttribute(ATTRIBUTE_VALUE);
 
-                            timestamps.add(
-                                    LocalDateTime.parse(
-                                            "%s %s:%s".formatted(day, hour, time),
-                                            DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss:SSS")
-                                    )
-                            );
+                            try {
+                                timestamps.add(
+                                        LocalDateTime.parse(
+                                                "%s %s:%s".formatted(day, hour, time),
+                                                DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss:SSS")
+                                        )
+                                );
+                            } catch (Exception e) {
+                                LOGGER.warn("Failed to parse timestamp in file {} for word '{}': {} {}:{}",
+                                        file.getName(), word, day, hour, time);
+                            }
                         }
                     }
                 }
 
                 map.put(word, timestamps);
+                LOGGER.trace("Successfully loaded word '{}' with {} entries.", word, timestamps.size());
             }
+
+            LOGGER.debug("Successfully loaded {} words from Verbose XML: {}", map.size(), file.getName());
         } catch (Exception e) {
-            e.printStackTrace();
+            LOGGER.error("Critical failure reading Verbose XML: {}", file.getAbsoluteFile(), e);
         }
 
         return map;
@@ -101,6 +117,7 @@ public final class XmlVerboseFileImpl extends AbstractXmlFileImpl {
 
     @Override
     protected void constructDocument(Document doc, XmlModel model) {
+        LOGGER.trace("Building DOM tree for Verbose XML format.");
         Element root = doc.createElement(TAG_FILE);
 
         for (XmlModelWord m : model.words()) {
@@ -141,13 +158,19 @@ public final class XmlVerboseFileImpl extends AbstractXmlFileImpl {
     private List<LocalDateTime> getLocalDateTimes(Element wordEl) {
         NodeList counts = wordEl.getElementsByTagName(TAG_COUNT);
         if (counts.getLength() != 1) {
-            throw new RuntimeException(
-                    "[%s] There has to be exactly one <%s> tag defined inside a <%s>!"
-                            .formatted(getFileType(), TAG_COUNT, TAG_WORD)
-            );
+            final String errorMsg = "[%s] Word '%s' must have exactly one <%s> tag!"
+                    .formatted(getFileType(), wordEl.getAttribute(ATTRIBUTE_VALUE), TAG_COUNT);
+            LOGGER.error(errorMsg);
+            throw new RuntimeException(errorMsg);
         }
 
         String countStr = ((Element) counts.item(0)).getAttribute(ATTRIBUTE_VALUE).trim();
-        return new ArrayList<>(Integer.parseInt(countStr));
+        try {
+            return new ArrayList<>(Integer.parseInt(countStr));
+        } catch (NumberFormatException e) {
+            LOGGER.warn("Invalid count value '{}' for word '{}'. Defaulting to empty list.",
+                    countStr, wordEl.getAttribute(ATTRIBUTE_VALUE));
+            return new ArrayList<>();
+        }
     }
 }

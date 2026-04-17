@@ -3,6 +3,8 @@ package de.whiteflame.rescount.io.impl.xml;
 import de.whiteflame.rescount.TimestampGrouper;
 import de.whiteflame.rescount.api.io.IFileReader;
 import de.whiteflame.rescount.api.io.IFileWriter;
+import de.whiteflame.rescount.api.log.ILogger;
+import de.whiteflame.rescount.api.log.LoggerFactory;
 import de.whiteflame.rescount.api.model.GroupedDay;
 import de.whiteflame.rescount.api.model.GroupedYear;
 import de.whiteflame.rescount.io.impl.xml.model.XmlModel;
@@ -29,7 +31,11 @@ import java.util.Set;
 
 public abstract sealed class AbstractXmlFileImpl implements IFileReader, IFileWriter
                                                  permits XmlVerboseFileImpl, XmlSlimFileImpl {
+    private static final ILogger LOGGER = LoggerFactory.getLogger(AbstractXmlFileImpl.class);
+
     public void writeFile(File file, Map<String, List<LocalDateTime>> groupedTimestamps, boolean indent) {
+        LOGGER.debug("Preparing XML model for file: {}", file.getAbsolutePath());
+
         Set<XmlModelWord> words = new LinkedHashSet<>();
 
         for (var entry : groupedTimestamps.entrySet()) {
@@ -37,6 +43,7 @@ public abstract sealed class AbstractXmlFileImpl implements IFileReader, IFileWr
         }
 
         XmlModel model = new XmlModel(words);
+        LOGGER.trace("Model constructed with {} unique words.", words.size());
 
         try {
             var factory = DocumentBuilderFactory.newInstance();
@@ -50,6 +57,7 @@ public abstract sealed class AbstractXmlFileImpl implements IFileReader, IFileWr
             Transformer transformer = transformerFactory.newTransformer();
 
             if (indent) {
+                LOGGER.trace("Applying XML indentation formatting.");
                 transformer.setOutputProperty(OutputKeys.INDENT, "yes");
                 transformer.setOutputProperty("{http://xml.apache.org/xslt}indent-amount", "4");
             }
@@ -57,14 +65,18 @@ public abstract sealed class AbstractXmlFileImpl implements IFileReader, IFileWr
             try (OutputStream os = Files.newOutputStream(file.toPath())) {
                 transformer.transform(new DOMSource(doc), new StreamResult(os));
             }
+
+            LOGGER.debug("Successfully wrote {} words to XML file: {}", words.size(), file.getName());
         } catch (Exception e) {
-            e.printStackTrace();
+            LOGGER.error("Critical error during XML transformation for file: {}", file.getName());
         }
     }
     
     protected abstract void constructDocument(Document doc, XmlModel model);
 
     protected XmlModelWord getXmlModelWord(String word, List<LocalDateTime> timestamps) {
+        LOGGER.trace("Processing word '{}' with {} timestamps", word, timestamps.size());
+
         List<GroupedDay> groupedDays = TimestampGrouper.groupByDay(timestamps);
 
         Set<XmlModelDay> modelDays = getXmlModelDays(groupedDays);
@@ -101,9 +113,16 @@ public abstract sealed class AbstractXmlFileImpl implements IFileReader, IFileWr
             var builder = DocumentBuilderFactory.newInstance().newDocumentBuilder();
             Document doc = builder.parse(file);
 
-            return doc.getDocumentElement().getTagName().equals(rootTag);
+            var actualTag = doc.getDocumentElement().getTagName();
+
+            boolean match = actualTag.equals(rootTag);
+            if (match) {
+                LOGGER.trace("File {} verified as XML type with root tag <{}>", file.getName(), actualTag);
+            }
+            return match;
         } catch (Exception e) {
-            e.printStackTrace();
+            LOGGER.warn("Could not parse XML header for {}; file might be malformed or not XML.", file.getName());
+            LOGGER.error("XML Parse failure details for {}", file.getName(), e);
         }
 
         return false;

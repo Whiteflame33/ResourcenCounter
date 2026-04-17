@@ -4,11 +4,14 @@ import de.whiteflame.rescount.TimestampGrouper;
 import de.whiteflame.rescount.api.io.FileType;
 import de.whiteflame.rescount.api.io.IFileReader;
 import de.whiteflame.rescount.api.io.IFileWriter;
+import de.whiteflame.rescount.api.log.ILogger;
+import de.whiteflame.rescount.api.log.LoggerFactory;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
+import java.io.EOFException;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -20,6 +23,7 @@ import java.util.List;
 import java.util.Map;
 
 public final class BinaryFileImpl implements IFileReader, IFileWriter {
+    private static final ILogger LOGGER = LoggerFactory.getLogger(BinaryFileImpl.class);
     private static final int MAGIC_BYTES = ('W' << 24) | ('T' << 16) | ('B' << 8) | 'S';
 
     @Override
@@ -29,6 +33,8 @@ public final class BinaryFileImpl implements IFileReader, IFileWriter {
 
     @Override
     public void writeFile(File file, Map<String, List<LocalDateTime>> groupedTimestamps) {
+        LOGGER.debug("Opening binary stream for writing: {}", file.getAbsolutePath());
+
         try (var out = new DataOutputStream(new BufferedOutputStream(new FileOutputStream(file)))) {
             out.writeInt(MAGIC_BYTES);
             out.writeInt(groupedTimestamps.size());
@@ -73,19 +79,23 @@ public final class BinaryFileImpl implements IFileReader, IFileWriter {
                         }
                     }
                 }
-
+                LOGGER.trace("Category '{}' serialized with {} timestamps.", entry.getKey(), entry.getValue().size());
             }
+            LOGGER.debug("Successfully saved binary file: {} ({} categories)", file.getName(), groupedTimestamps.size());
         } catch (Exception e) {
-            e.printStackTrace();
+            LOGGER.error("Failed to write binary file: {}", file.getAbsolutePath(), e);
         }
     }
 
     @Override
     public Map<String, List<LocalDateTime>> readFile(File file) {
+        LOGGER.debug("Reading binary file: {}", file.getAbsolutePath());
+
         Map<String, List<LocalDateTime>> map = new LinkedHashMap<>();
 
         try (var in = new DataInputStream(
                 new BufferedInputStream(new FileInputStream(file)))) {
+            LOGGER.trace("Skipping {} magic bytes", Integer.BYTES);
             in.skipBytes(Integer.BYTES);
 
             int wordCount = in.readInt();
@@ -124,12 +134,14 @@ public final class BinaryFileImpl implements IFileReader, IFileWriter {
                         }
                     }
                 }
-
                 map.put(word, timestamps);
+                LOGGER.trace("Loaded word '{}' with {} entries.", word, timestamps.size());
             }
-
+            LOGGER.debug("Binary load complete. Categories: {}", map.size());
+        } catch (EOFException e) {
+            LOGGER.warn("Reached unexpected end of binary file: {}. Data might be incomplete.", file.getName(), e);
         } catch (Exception e) {
-            e.printStackTrace();
+            LOGGER.error("Critical failure reading binary file: {}", file.getAbsolutePath(), e);
         }
 
         return map;
@@ -139,30 +151,43 @@ public final class BinaryFileImpl implements IFileReader, IFileWriter {
     public boolean isType(File file) {
         try (var in = new DataInputStream(
                 new BufferedInputStream(new FileInputStream(file)))) {
-            return in.readInt() == MAGIC_BYTES;
+            int readValue = in.readInt();
+            boolean match = readValue == MAGIC_BYTES;
+            LOGGER.trace("Reading first {}B = {}; Is decided format", Integer.BYTES, readValue, match);
+            return match;
         } catch (Exception e) {
-            e.printStackTrace();
+            LOGGER.error("File {} is not a valid {} binary file", MAGIC_BYTES, file.getName());
         }
 
         return false;
     }
 
     private static String formatDay(int day) {
-        String s = String.valueOf(day);
-        return s.substring(0,4) + "-" + s.substring(4,6) + "-" + s.substring(6);
+        try {
+            String s = String.valueOf(day);
+            return s.substring(0, 4) + "-" + s.substring(4, 6) + "-" + s.substring(6);
+        } catch (Exception e) {
+            LOGGER.warn("Failed to format day integer: {}. Stream might be misaligned.", day);
+            return "0000-00-00";
+        }
     }
 
     private static LocalDateTime toDateTime(String day, int hour, int value) {
-        String padded = String.format("%07d", value);
+        try {
+            String padded = String.format("%07d", value);
 
-        String time =
-                padded.substring(0, 2) + ":" +
-                        padded.substring(2, 4) + ":" +
-                        padded.substring(4);
+            String time =
+                    padded.substring(0, 2) + ":" +
+                            padded.substring(2, 4) + ":" +
+                            padded.substring(4);
 
-        return LocalDateTime.parse(
-                "%s %02d:%s".formatted(day, hour, time),
-                java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss:SSS")
-        );
+            return LocalDateTime.parse(
+                    "%s %02d:%s".formatted(day, hour, time),
+                    java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss:SSS")
+            );
+        } catch (Exception e) {
+            LOGGER.error("Timestamp parsing error for day {} hour {} value {}.", day, hour, value, e);
+            throw e;
+        }
     }
 }
