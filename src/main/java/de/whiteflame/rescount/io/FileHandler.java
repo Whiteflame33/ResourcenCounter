@@ -29,7 +29,7 @@ public final class FileHandler {
             LOGGER.warn("Reader for file type {} is already registered.", fileType);
             return;
         }
-        LOGGER.info("Registering reader for file type {}", fileType);
+        LOGGER.debug("Registering reader for file type {}", fileType);
         fileReaders.put(fileType, reader);
     }
 
@@ -38,7 +38,7 @@ public final class FileHandler {
             LOGGER.warn("Writer for file type {} is already registered.", fileType);
             return;
         }
-        LOGGER.info("Registering writer for file type {}", fileType);
+        LOGGER.debug("Registering writer for file type {}", fileType);
         fileWriters.put(fileType, writer);
     }
 

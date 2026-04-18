@@ -1,11 +1,13 @@
 package de.whiteflame.rescount;
 
-import de.whiteflame.rescount.api.config.GlobalConfig;
+import de.whiteflame.rescount.api.log.LogConfig;
+import de.whiteflame.rescount.api.log.LogLevel;
+import de.whiteflame.rescount.config.GlobalConfig;
 import de.whiteflame.rescount.api.io.FileType;
 import de.whiteflame.rescount.api.log.ILogger;
 import de.whiteflame.rescount.api.log.LoggerFactory;
-import de.whiteflame.rescount.event.EventProcessor;
-import de.whiteflame.rescount.event.WordCountEvent;
+import de.whiteflame.rescount.config.impl.XmlConfigBackend;
+import de.whiteflame.rescount.config.impl.XmlConfigParser;
 import de.whiteflame.rescount.io.FileConstants;
 import de.whiteflame.rescount.io.FileHandler;
 import de.whiteflame.rescount.io.impl.BinaryFileImpl;
@@ -21,18 +23,27 @@ import java.util.*;
 import javax.swing.*;
 
 public class Main {
+    public static final File CONFIG_FILE = new File("config.xml");
     public static final String WORD_RESOURCE = "Räsorße";
 
-    private static ILogger LOGGER;
+    private static final ILogger LOGGER;
 
     static int counter = 0;
     static Map<String, List<LocalDateTime>> entries = new LinkedHashMap<>();
 
-    static FileHandler fileHandler = new FileHandler();
+    static FileHandler fileHandler;
 
     static {
         LoggerFactory.setLoggerInstance(ConsoleLogger.class);
         LOGGER = LoggerFactory.getLogger(Main.class);
+
+        GlobalConfig.init(new XmlConfigBackend(CONFIG_FILE), new XmlConfigParser());
+
+        LogConfig.GLOBAL_LOG_LEVEL = GlobalConfig.get(GlobalConfig.KEY_LOG_LEVEL, LogLevel.class, LogLevel.INFO);
+
+        LOGGER.info("Starting app with DeviceID {}", GlobalConfig.getDeviceId());
+
+        fileHandler = new FileHandler();
 
         fileHandler.registerReader(FileType.TEXT, new TextFileImpl());
         fileHandler.registerReader(FileType.XML_VERBOSE, new XmlVerboseFileImpl());
@@ -48,11 +59,8 @@ public class Main {
     }
 
     static void main() {
-        GlobalConfig.init(UUID.randomUUID().toString());
-
         load();
 
-        EventProcessor processor = new EventProcessor(entries);
         counter = entries.getOrDefault(WORD_RESOURCE, List.of()).size();
 
         JFrame frame = new JFrame();
@@ -69,25 +77,14 @@ public class Main {
         JButton a = new JButton("+1");
         p.add(a);
 
-        a.addActionListener(_ -> {
-            /*
+        a.addActionListener(e -> {
             ++counter;
 
             entries
                     .computeIfAbsent(WORD_RESOURCE, k -> new ArrayList<>())
-                    .add(LocalDateTime.now());*/
+                    .add(LocalDateTime.now());
 
-            WordCountEvent event = WordCountEvent.create(
-                    GlobalConfig.instance().CLIENT_ID,
-                    WORD_RESOURCE
-            );
-
-            if (processor.process(event)) {
-                counter = entries.get(WORD_RESOURCE).size();
-                disp.setText(String.valueOf(counter));
-            }
-
-            /*disp.setText(String.valueOf(counter));*/
+            disp.setText(String.valueOf(counter));
         });
 
         frame.setLocationRelativeTo(null);
