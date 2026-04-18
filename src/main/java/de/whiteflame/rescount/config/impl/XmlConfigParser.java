@@ -3,6 +3,8 @@ package de.whiteflame.rescount.config.impl;
 import de.whiteflame.rescount.api.config.IConfigParser;
 import de.whiteflame.rescount.api.log.LogLevel;
 
+import java.io.File;
+
 public class XmlConfigParser implements IConfigParser {
     @Override
     @SuppressWarnings("unchecked")
@@ -21,6 +23,8 @@ public class XmlConfigParser implements IConfigParser {
             return (T) rawValue;
         if (type == LogLevel.class)
             return (T) LogLevel.from(rawValue);
+        if (type == File.class)
+            return (T) new File(rawValue);
 
         throw new UnsupportedOperationException("Unsupported config type: " + type);
     }
