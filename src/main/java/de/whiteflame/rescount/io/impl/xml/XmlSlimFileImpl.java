@@ -33,7 +33,7 @@ public final class XmlSlimFileImpl extends AbstractXmlFileImpl {
 
     @Override
     public FileType getFileType() {
-        return FileType.XML_VERBOSE;
+        return FileType.XML_SLIM;
     }
 
     @Override

@@ -100,24 +100,24 @@ public class Main {
 
         Map<String, List<LocalDateTime>> loaded = null;
 
-        if (FileConstants.TEXT_FILE.exists()) {
+        if (FileConstants.getTextFile().exists()) {
             LOGGER.info("Found text file. Loading...");
-            loaded = fileHandler.load(FileConstants.TEXT_FILE);
+            loaded = fileHandler.load(FileConstants.getTextFile());
             LOGGER.info("Deleting text file. Migrating...");
-            FileConstants.TEXT_FILE.deleteOnExit();
-        } else if (FileConstants.XML_FILE.exists()) {
+            FileConstants.getTextFile().deleteOnExit();
+        } else if (FileConstants.getXmlFile().exists()) {
             LOGGER.info("Found xml file. Loading...");
-            loaded = fileHandler.load(FileConstants.XML_FILE);
+            loaded = fileHandler.load(FileConstants.getXmlFile());
             LOGGER.info("Deleting xml file. Migrating...");
-            FileConstants.XML_FILE.deleteOnExit();
-        } else if (FileConstants.DATA_FILE.exists()) {
+            FileConstants.getXmlFile().deleteOnExit();
+        } else if (FileConstants.getDataFile().exists()) {
             LOGGER.info("Found simple binary file. Loading...");
-            loaded = fileHandler.load(FileConstants.DATA_FILE);
+            loaded = fileHandler.load(FileConstants.getDataFile());
             LOGGER.info("Deleting simple binary file. Migrating...");
-            FileConstants.DATA_FILE.deleteOnExit();
-        } else if (FileConstants.COMPRESSED_DATA_FILE.exists()) {
+            FileConstants.getDataFile().deleteOnExit();
+        } else if (FileConstants.getCompressedDataFile().exists()) {
             LOGGER.info("Found compressed binary file. Loading...");
-            loaded = fileHandler.load(FileConstants.COMPRESSED_DATA_FILE);
+            loaded = fileHandler.load(FileConstants.getCompressedDataFile());
         }
 
         if (loaded != null) {
@@ -130,7 +130,7 @@ public class Main {
     static void safe() {
         LOGGER.info("Trying to save to compressed binary file...");
         try {
-            fileHandler.save(entries, FileConstants.COMPRESSED_DATA_FILE, FileType.BYTE_2);
+            fileHandler.save(entries, FileConstants.getCompressedDataFile(), FileType.BYTE_2);
             LOGGER.info("Done saving to compressed binary file.");
         } catch (Exception e) {
             LOGGER.error("Failed to save to compressed binary file", e);

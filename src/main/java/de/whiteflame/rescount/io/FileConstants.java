@@ -1,17 +1,25 @@
 package de.whiteflame.rescount.io;
 
+import de.whiteflame.rescount.config.GlobalConfig;
+
 import java.io.File;
 
 public final class FileConstants {
     private FileConstants() {}
 
-    public static final String
-            USER_HOME = System.getProperty("user.home"),
-            F_USER_HOME = USER_HOME + File.separator;
+    public static File getTextFile() {
+        return GlobalConfig.getDataFile("wissmann.txt");
+    }
 
-    public static final File
-            TEXT_FILE = new File(F_USER_HOME+ "wissmann.txt"),
-            XML_FILE = new File(F_USER_HOME + "wissmann.xml"),
-            DATA_FILE = new File(F_USER_HOME + "wissmann.data"),
-            COMPRESSED_DATA_FILE = new File(F_USER_HOME + "wissmann.z.data");
+    public static File getXmlFile() {
+        return GlobalConfig.getDataFile("wissmann.xml");
+    }
+
+    public static File getDataFile() {
+        return GlobalConfig.getDataFile("wissmann.data");
+    }
+
+    public static File getCompressedDataFile() {
+        return GlobalConfig.getDataFile("wissmann.z.data");
+    }
 }
