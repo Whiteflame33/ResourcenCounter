@@ -1,8 +1,11 @@
 package de.whiteflame.rescount;
 
+import de.whiteflame.rescount.api.config.GlobalConfig;
 import de.whiteflame.rescount.api.io.FileType;
 import de.whiteflame.rescount.api.log.ILogger;
 import de.whiteflame.rescount.api.log.LoggerFactory;
+import de.whiteflame.rescount.event.EventProcessor;
+import de.whiteflame.rescount.event.WordCountEvent;
 import de.whiteflame.rescount.io.FileConstants;
 import de.whiteflame.rescount.io.FileHandler;
 import de.whiteflame.rescount.io.impl.BinaryFileImpl;
@@ -45,8 +48,11 @@ public class Main {
     }
 
     static void main() {
+        GlobalConfig.init(UUID.randomUUID().toString());
+
         load();
 
+        EventProcessor processor = new EventProcessor(entries);
         counter = entries.getOrDefault(WORD_RESOURCE, List.of()).size();
 
         JFrame frame = new JFrame();
@@ -63,14 +69,25 @@ public class Main {
         JButton a = new JButton("+1");
         p.add(a);
 
-        a.addActionListener(e -> {
+        a.addActionListener(_ -> {
+            /*
             ++counter;
 
             entries
                     .computeIfAbsent(WORD_RESOURCE, k -> new ArrayList<>())
-                    .add(LocalDateTime.now());
+                    .add(LocalDateTime.now());*/
 
-            disp.setText(String.valueOf(counter));
+            WordCountEvent event = WordCountEvent.create(
+                    GlobalConfig.instance().CLIENT_ID,
+                    WORD_RESOURCE
+            );
+
+            if (processor.process(event)) {
+                counter = entries.get(WORD_RESOURCE).size();
+                disp.setText(String.valueOf(counter));
+            }
+
+            /*disp.setText(String.valueOf(counter));*/
         });
 
         frame.setLocationRelativeTo(null);
