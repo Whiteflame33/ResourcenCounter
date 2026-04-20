@@ -1,6 +1,6 @@
 package de.whiteflame.rescount.io.impl;
 
-import de.whiteflame.rescount.TimestampGrouper;
+import de.whiteflame.rescount.util.TimestampGrouper;
 import de.whiteflame.rescount.api.io.FileType;
 import de.whiteflame.rescount.api.io.IFileReader;
 import de.whiteflame.rescount.api.io.IFileWriter;

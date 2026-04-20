@@ -7,7 +7,6 @@ import de.whiteflame.rescount.api.log.LogLevel;
 import de.whiteflame.rescount.util.DeviceIdentifier;
 
 import java.io.File;
-import java.util.Optional;
 
 public class GlobalConfig {
     public static final ConfigKey<LogLevel> LOG_LEVEL =
@@ -33,10 +32,10 @@ public class GlobalConfig {
     }
 
     public File getDataFile(String fileExtension) {
-        File baseDir = get(DATA_PATH);
+        File baseDir = getAs(DATA_PATH);
         if (!baseDir.exists())
             baseDir.mkdirs();
-        return new File(baseDir, get(DATA_NAME) + "." + fileExtension);
+        return new File(baseDir, getAs(DATA_NAME) + "." + fileExtension);
     }
 
     public <T> void set(ConfigKey<T> key, T value) {
@@ -48,7 +47,7 @@ public class GlobalConfig {
             set(key, key.defaultValue());
     }
 
-    public <T> T get(ConfigKey<T> key) {
+    public <T> T getAs(ConfigKey<T> key) {
         return backend.getValue(key.key())
                 .map(val -> parser.parse(val, key.type()))
                 .orElseGet(() -> {

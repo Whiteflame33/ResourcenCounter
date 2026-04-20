@@ -1,4 +1,4 @@
-package de.whiteflame.rescount;
+package de.whiteflame.rescount.util;
 
 import de.whiteflame.rescount.api.model.GroupedDay;
 import de.whiteflame.rescount.api.model.GroupedHour;
@@ -6,9 +6,7 @@ import de.whiteflame.rescount.api.model.GroupedYear;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 
 public final class TimestampGrouper {
     private TimestampGrouper() {}
