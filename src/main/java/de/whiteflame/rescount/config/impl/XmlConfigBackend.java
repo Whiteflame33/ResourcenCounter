@@ -7,6 +7,10 @@ import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
+import org.xml.sax.ErrorHandler;
+import org.xml.sax.InputSource;
+import org.xml.sax.SAXException;
+import org.xml.sax.SAXParseException;
 
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.transform.OutputKeys;
@@ -14,6 +18,7 @@ import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 import java.io.File;
+import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.file.Files;
 import java.util.HashMap;
@@ -26,7 +31,8 @@ public class XmlConfigBackend implements IConfigBackend {
     private static final String TAG_ROOT = "configuration",
                                 TAG_OPTION = "option",
                                 ATTRIBUTE_KEY = "key",
-                                ATTRIBUTE_VALUE = "value";
+                                ATTRIBUTE_VALUE = "value",
+                                DTD_FILE = "configuration.dtd";
 
     private final File file;
     private final Map<String, String> properties;
@@ -44,7 +50,43 @@ public class XmlConfigBackend implements IConfigBackend {
         }
 
         try {
-            var builder = DocumentBuilderFactory.newInstance().newDocumentBuilder();
+            var factory = DocumentBuilderFactory.newInstance();
+            factory.setValidating(true);
+            factory.setIgnoringElementContentWhitespace(true);
+
+            var builder = factory.newDocumentBuilder();
+
+            builder.setEntityResolver((_, systemId) -> {
+                if (systemId.contains(DTD_FILE)) {
+                    InputStream dtdStream = getClass().getClassLoader().getResourceAsStream(DTD_FILE);
+                    if (dtdStream != null) {
+                        return new InputSource(dtdStream);
+                    } else {
+                        LOGGER.error("Could not find {} in resources!", DTD_FILE);
+                    }
+                }
+                return null;
+            });
+
+            builder.setErrorHandler(new ErrorHandler() {
+                @Override
+                public void warning(SAXParseException e) {
+                    LOGGER.warn("XML Validation Warning: {}", e.getMessage());
+                }
+
+                @Override
+                public void error(SAXParseException e) throws SAXException {
+                    LOGGER.error("XML Validation Error: {}", e.getMessage());
+                    throw e;
+                }
+
+                @Override
+                public void fatalError(SAXParseException e) throws SAXException {
+                    LOGGER.error("XML Fatal Error: {}", e.getMessage());
+                    throw e;
+                }
+            });
+
             Document doc = builder.parse(file);
 
             LOGGER.debug("Begin parsing of XML config file...");
@@ -111,6 +153,8 @@ public class XmlConfigBackend implements IConfigBackend {
 
             transformer.setOutputProperty(OutputKeys.INDENT, "yes");
             transformer.setOutputProperty("{http://xml.apache.org/xslt}indent-amount", "4");
+
+            transformer.setOutputProperty(OutputKeys.DOCTYPE_SYSTEM, DTD_FILE);
 
             try (OutputStream os = Files.newOutputStream(file.toPath())) {
                 LOGGER.trace("Storing DOM structure to file {}", file.getName());
