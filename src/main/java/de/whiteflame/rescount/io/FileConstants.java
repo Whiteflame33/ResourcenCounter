@@ -7,19 +7,8 @@ import java.io.File;
 public final class FileConstants {
     private FileConstants() {}
 
-    public static File getTextFile() {
-        return GlobalConfig.getDataFile("wissmann.txt");
-    }
-
-    public static File getXmlFile() {
-        return GlobalConfig.getDataFile("wissmann.xml");
-    }
-
-    public static File getDataFile() {
-        return GlobalConfig.getDataFile("wissmann.data");
-    }
-
-    public static File getCompressedDataFile() {
-        return GlobalConfig.getDataFile("wissmann.z.data");
-    }
+    public static final String TEXT_FILE = "wissmann.txt";
+    public static final String XML_FILE = "wissmann.xml";
+    public static final String DATA_FILE = "wissmann.data";
+    public static final String COMPRESSED_DATA_FILE = "wissmann.dataz";
 }

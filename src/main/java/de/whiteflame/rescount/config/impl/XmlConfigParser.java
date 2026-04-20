@@ -1,6 +1,7 @@
 package de.whiteflame.rescount.config.impl;
 
 import de.whiteflame.rescount.api.config.IConfigParser;
+import de.whiteflame.rescount.api.io.FileType;
 import de.whiteflame.rescount.api.log.LogLevel;
 
 import java.io.File;
@@ -22,7 +23,9 @@ public class XmlConfigParser implements IConfigParser {
         if (type == String.class)
             return (T) rawValue;
         if (type == LogLevel.class)
-            return (T) LogLevel.from(rawValue);
+            return (T) LogLevel.from(rawValue.trim());
+        if (type == FileType.class)
+            return (T) FileType.valueOf(rawValue.trim().toUpperCase());
         if (type == File.class)
             return (T) new File(rawValue);
 
