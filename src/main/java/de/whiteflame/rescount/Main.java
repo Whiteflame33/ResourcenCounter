@@ -1,7 +1,6 @@
 package de.whiteflame.rescount;
 
 import de.whiteflame.rescount.api.log.LogConfig;
-import de.whiteflame.rescount.api.log.LogLevel;
 import de.whiteflame.rescount.config.GlobalConfig;
 import de.whiteflame.rescount.api.io.FileType;
 import de.whiteflame.rescount.api.log.ILogger;
@@ -105,22 +104,22 @@ public class Main {
         Map<String, List<LocalDateTime>> loaded = null;
 
         File f;
-        if ((f = config.getDataFile(FileConstants.TEXT_FILE)).exists()) {
+        if ((f = config.getDataFile(FileConstants.TEXT_FILE_EXT)).exists()) {
             LOGGER.info("Found text file. Loading...");
             loaded = fileHandler.load(f);
             LOGGER.info("Deleting text file. Migrating...");
             f.deleteOnExit();
-        } else if ((f = config.getDataFile(FileConstants.XML_FILE)).exists()) {
+        } else if ((f = config.getDataFile(FileConstants.XML_FILE_EXT)).exists()) {
             LOGGER.info("Found xml file. Loading...");
             loaded = fileHandler.load(f);
             LOGGER.info("Deleting xml file. Migrating...");
             f.deleteOnExit();
-        } else if ((f = config.getDataFile(FileConstants.DATA_FILE)).exists()) {
+        } else if ((f = config.getDataFile(FileConstants.DATA_FILE_EXT)).exists()) {
             LOGGER.info("Found simple binary file. Loading...");
             loaded = fileHandler.load(f);
             LOGGER.info("Deleting simple binary file. Migrating...");
             f.deleteOnExit();
-        } else if ((f = config.getDataFile(FileConstants.COMPRESSED_DATA_FILE)).exists()) {
+        } else if ((f = config.getDataFile(FileConstants.COMPRESSED_DATA_FILE_EXT)).exists()) {
             LOGGER.info("Found compressed binary file. Loading...");
             loaded = fileHandler.load(f);
         }
@@ -142,7 +141,7 @@ public class Main {
         try {
             if (entries_changed) {
                 fileHandler.save(entries,
-                        config.getDataFile(FileConstants.COMPRESSED_DATA_FILE),
+                        config.getDataFile(FileConstants.COMPRESSED_DATA_FILE_EXT),
                         config.get(GlobalConfig.DATA_TYPE));
                 LOGGER.info("Done saving to compressed binary file.");
             }
