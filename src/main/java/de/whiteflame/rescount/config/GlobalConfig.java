@@ -15,6 +15,8 @@ public class GlobalConfig {
     public static final ConfigKey<File> DATA_PATH =
             new ConfigKey<>("device.data.path", File.class,
                     new File(System.getProperty("user.home"), ".whiteflame_rescount"));
+    public static final ConfigKey<String> DATA_NAME =
+            new ConfigKey<>("device.data.name", String.class, "wissmann");
     public static final ConfigKey<FileType> DATA_TYPE =
             new ConfigKey<>("device.data.type", FileType.class, FileType.BYTE_2);
     public static final ConfigKey<String> DEVICE_ID =
@@ -30,11 +32,11 @@ public class GlobalConfig {
         ensureDefaults();
     }
 
-    public File getDataFile(String fileName) {
+    public File getDataFile(String fileExtension) {
         File baseDir = get(DATA_PATH);
         if (!baseDir.exists())
             baseDir.mkdirs();
-        return new File(baseDir, fileName);
+        return new File(baseDir, get(DATA_NAME) + "." + fileExtension);
     }
 
     public <T> void set(ConfigKey<T> key, T value) {
@@ -64,6 +66,7 @@ public class GlobalConfig {
 
     private void ensureDefaults() {
         setIfAbsent(DATA_PATH);
+        setIfAbsent(DATA_NAME);
         setIfAbsent(DATA_TYPE);
         setIfAbsent(LOG_LEVEL);
 
