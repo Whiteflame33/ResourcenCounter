@@ -1,7 +1,11 @@
 package de.whiteflame.rescount;
 
+import de.whiteflame.rescount.api.config.IConfigBackend;
+import de.whiteflame.rescount.api.config.IConfigParser;
 import de.whiteflame.rescount.api.io.FileType;
 import de.whiteflame.rescount.api.log.ILogger;
+import de.whiteflame.rescount.api.log.LogConfig;
+import de.whiteflame.rescount.api.log.LogLevel;
 import de.whiteflame.rescount.api.log.LoggerFactory;
 import de.whiteflame.rescount.api.service.ICounterListener;
 import de.whiteflame.rescount.api.ui.IAppUi;
@@ -14,6 +18,7 @@ import de.whiteflame.rescount.io.impl.TextFileImpl;
 import de.whiteflame.rescount.io.impl.xml.XmlSlimFileImpl;
 import de.whiteflame.rescount.io.impl.xml.XmlVerboseFileImpl;
 import de.whiteflame.rescount.ui.SwingAppUiImpl;
+import org.w3c.dom.css.Counter;
 
 import javax.swing.*;
 import java.io.File;
@@ -22,31 +27,21 @@ import java.util.List;
 import java.util.Map;
 
 public class CounterApp {
-    private static final ILogger LOGGER = LoggerFactory.getLogger(CounterApp.class);
+    private final ILogger LOGGER = LoggerFactory.getLogger(CounterApp.class);
 
     private final CounterService service;
     private final FileHandler fileHandler;
     private final GlobalConfig config;
 
-    public CounterApp(GlobalConfig config) {
+    private CounterApp(GlobalConfig config) {
         this.config = config;
         this.service = new CounterService();
         this.fileHandler = new FileHandler();
-
-        fileHandler.registerReader(FileType.TEXT, new TextFileImpl());
-        fileHandler.registerReader(FileType.XML_VERBOSE, new XmlVerboseFileImpl());
-        fileHandler.registerReader(FileType.XML_SLIM, new XmlSlimFileImpl());
-        fileHandler.registerReader(FileType.BYTE_1, new BinaryFileImpl());
-        fileHandler.registerReader(FileType.BYTE_2, new CompressedBinaryFileImpl());
-
-        fileHandler.registerWriter(FileType.TEXT, new TextFileImpl());
-        fileHandler.registerWriter(FileType.XML_VERBOSE, new XmlVerboseFileImpl());
-        fileHandler.registerWriter(FileType.XML_SLIM, new XmlSlimFileImpl());
-        fileHandler.registerWriter(FileType.BYTE_1, new BinaryFileImpl());
-        fileHandler.registerWriter(FileType.BYTE_2, new CompressedBinaryFileImpl());
     }
 
     public void start() {
+        LOGGER.flog(LogLevel.INFO, "Starting App with ID {}", config.get(GlobalConfig.DEVICE_ID));
+
         loadData();
         IAppUi ui = new SwingAppUiImpl(service, Main.WORD_RESOURCE, this::saveData);
         service.addListener((ICounterListener) ui);
@@ -97,6 +92,53 @@ public class CounterApp {
             LOGGER.info("Done saving to compressed binary file.");
         } catch (Exception e) {
             LOGGER.error("Failed to save to compressed binary file", e);
+        }
+    }
+
+    public static Builder builder() {
+        return new Builder();
+    }
+
+    public static class Builder {
+        private IConfigBackend backend;
+        private IConfigParser parser;
+        private Class<? extends ILogger> loggerClass;
+
+        private Builder() {}
+
+        public Builder withLogger(Class<? extends ILogger> clazz) {
+            this.loggerClass = clazz;
+            return this;
+        }
+
+        public Builder withConfigBackend(IConfigBackend backend) {
+            this.backend = backend;
+            return this;
+        }
+
+        public Builder withConfigParser(IConfigParser parser) {
+            this.parser = parser;
+            return this;
+        }
+
+        public CounterApp build() {
+            if (loggerClass != null)
+                LoggerFactory.setLoggerInstance(loggerClass);
+
+            var log = LoggerFactory.getLogger(CounterApp.class);
+
+            if (backend == null)
+                throw new IllegalStateException("ConfigBackend must be provided!");
+
+            if (parser == null)
+                throw new IllegalStateException("ConfigParser must be provided!");
+
+            GlobalConfig globalConfig = new GlobalConfig(backend, parser);
+
+            LogConfig.GLOBAL_LOG_LEVEL = globalConfig.get(GlobalConfig.LOG_LEVEL);
+
+            log.debug("Creating {}", CounterApp.class.getSimpleName());
+            return new CounterApp(globalConfig);
         }
     }
 }

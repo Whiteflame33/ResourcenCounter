@@ -1,0 +1,5 @@
+de.whiteflame.rescount.io.impl.TextFileImpl
+de.whiteflame.rescount.io.impl.xml.XmlVerboseFileImpl
+de.whiteflame.rescount.io.impl.xml.XmlSlimFileImpl
+de.whiteflame.rescount.io.impl.BinaryFileImpl
+de.whiteflame.rescount.io.impl.CompressedBinaryFileImpl
