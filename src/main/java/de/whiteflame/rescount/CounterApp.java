@@ -2,23 +2,18 @@ package de.whiteflame.rescount;
 
 import de.whiteflame.rescount.api.config.IConfigBackend;
 import de.whiteflame.rescount.api.config.IConfigParser;
-import de.whiteflame.rescount.api.io.FileType;
 import de.whiteflame.rescount.api.log.ILogger;
 import de.whiteflame.rescount.api.log.LogConfig;
 import de.whiteflame.rescount.api.log.LogLevel;
 import de.whiteflame.rescount.api.log.LoggerFactory;
 import de.whiteflame.rescount.api.service.ICounterListener;
+import de.whiteflame.rescount.api.service.ICounterService;
 import de.whiteflame.rescount.api.ui.IAppUi;
 import de.whiteflame.rescount.config.GlobalConfig;
 import de.whiteflame.rescount.io.FileConstants;
 import de.whiteflame.rescount.io.FileHandler;
-import de.whiteflame.rescount.io.impl.BinaryFileImpl;
-import de.whiteflame.rescount.io.impl.CompressedBinaryFileImpl;
-import de.whiteflame.rescount.io.impl.TextFileImpl;
-import de.whiteflame.rescount.io.impl.xml.XmlSlimFileImpl;
-import de.whiteflame.rescount.io.impl.xml.XmlVerboseFileImpl;
+import de.whiteflame.rescount.service.impl.CounterService;
 import de.whiteflame.rescount.ui.SwingAppUiImpl;
-import org.w3c.dom.css.Counter;
 
 import javax.swing.*;
 import java.io.File;
@@ -29,7 +24,7 @@ import java.util.Map;
 public class CounterApp {
     private final ILogger LOGGER = LoggerFactory.getLogger(CounterApp.class);
 
-    private final CounterService service;
+    private final ICounterService service;
     private final FileHandler fileHandler;
     private final GlobalConfig config;
 
@@ -40,7 +35,7 @@ public class CounterApp {
     }
 
     public void start() {
-        LOGGER.flog(LogLevel.INFO, "Starting App with ID {}", config.get(GlobalConfig.DEVICE_ID));
+        LOGGER.flog(LogLevel.INFO, "Starting App with ID {}", config.getAs(GlobalConfig.DEVICE_ID));
 
         loadData();
         IAppUi ui = new SwingAppUiImpl(service, Main.WORD_RESOURCE, this::saveData);
@@ -79,7 +74,7 @@ public class CounterApp {
     }
 
     public void saveData() {
-        if (!service.hasChangedFromLoaded()) {
+        if (!service.hasChangedSince()) {
             LOGGER.info("No changes. Abort saving...");
             return;
         }
@@ -88,7 +83,7 @@ public class CounterApp {
         try {
             fileHandler.save(service.getEntries(),
                     config.getDataFile(FileConstants.COMPRESSED_DATA_FILE_EXT),
-                    config.get(GlobalConfig.DATA_TYPE));
+                    config.getAs(GlobalConfig.DATA_TYPE));
             LOGGER.info("Done saving to compressed binary file.");
         } catch (Exception e) {
             LOGGER.error("Failed to save to compressed binary file", e);
@@ -135,7 +130,7 @@ public class CounterApp {
 
             GlobalConfig globalConfig = new GlobalConfig(backend, parser);
 
-            LogConfig.GLOBAL_LOG_LEVEL = globalConfig.get(GlobalConfig.LOG_LEVEL);
+            LogConfig.GLOBAL_LOG_LEVEL = globalConfig.getAs(GlobalConfig.LOG_LEVEL);
 
             log.debug("Creating {}", CounterApp.class.getSimpleName());
             return new CounterApp(globalConfig);

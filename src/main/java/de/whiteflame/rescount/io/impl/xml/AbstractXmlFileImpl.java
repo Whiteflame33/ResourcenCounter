@@ -1,12 +1,11 @@
 package de.whiteflame.rescount.io.impl.xml;
 
-import de.whiteflame.rescount.TimestampGrouper;
+import de.whiteflame.rescount.util.TimestampGrouper;
 import de.whiteflame.rescount.api.io.IFileReader;
 import de.whiteflame.rescount.api.io.IFileWriter;
 import de.whiteflame.rescount.api.log.ILogger;
 import de.whiteflame.rescount.api.log.LoggerFactory;
 import de.whiteflame.rescount.api.model.GroupedDay;
-import de.whiteflame.rescount.api.model.GroupedYear;
 import de.whiteflame.rescount.io.impl.xml.model.XmlModel;
 import de.whiteflame.rescount.io.impl.xml.model.XmlModelDay;
 import de.whiteflame.rescount.io.impl.xml.model.XmlModelHour;
