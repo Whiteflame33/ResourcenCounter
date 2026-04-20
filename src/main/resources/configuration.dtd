@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!ELEMENT configuration (option*)>
+
+<!ELEMENT option EMPTY>
+<!ATTLIST option
+        key CDATA #REQUIRED
+        value CDATA #REQUIRED>
