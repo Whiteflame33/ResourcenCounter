@@ -4,6 +4,7 @@ import de.whiteflame.rescount.api.io.FileType;
 import de.whiteflame.rescount.api.io.IFileReader;
 import de.whiteflame.rescount.api.io.IFileWriter;
 import de.whiteflame.rescount.api.log.ILogger;
+import de.whiteflame.rescount.api.log.LogLevel;
 import de.whiteflame.rescount.api.log.LoggerFactory;
 
 import java.io.File;
@@ -12,6 +13,7 @@ import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.ServiceLoader;
 
 public final class FileHandler {
     private static final ILogger LOGGER = LoggerFactory.getLogger(FileHandler.class);
@@ -22,6 +24,24 @@ public final class FileHandler {
     public FileHandler() {
         fileReaders = new HashMap<>();
         fileWriters = new HashMap<>();
+
+        discoverServices();
+    }
+
+    public void discoverServices() {
+        var resource = getClass().getClassLoader().getResource("META-INF/services/de.whiteflame.rescount.api.io.IFileReader");
+        LOGGER.trace("SPI File URL: {}", resource);
+
+        LOGGER.debug("Running {} discovery", IFileReader.class.getSimpleName());
+        ServiceLoader<IFileReader> readers = ServiceLoader.load(IFileReader.class, IFileReader.class.getClassLoader());
+        readers.forEach(reader -> registerReader(reader.getFileType(), reader));
+
+        LOGGER.debug("Running {} discovery", IFileWriter.class.getSimpleName());
+        ServiceLoader<IFileWriter> writers = ServiceLoader.load(IFileWriter.class, IFileWriter.class.getClassLoader());
+        writers.forEach(writer -> registerWriter(writer.getFileType(), writer));
+
+        LOGGER.trace("writers: {}", writers.stream().count());
+        LOGGER.trace("readers: {}", readers.stream().count());
     }
 
     public void registerReader(FileType fileType, IFileReader reader) {
