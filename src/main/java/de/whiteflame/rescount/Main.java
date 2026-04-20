@@ -30,18 +30,20 @@ public class Main {
 
     static int counter = 0;
     static Map<String, List<LocalDateTime>> entries = new LinkedHashMap<>();
+    static volatile boolean entries_changed = false;
 
     static FileHandler fileHandler;
+    static GlobalConfig config;
 
     static {
         LoggerFactory.setLoggerInstance(ConsoleLogger.class);
         LOGGER = LoggerFactory.getLogger(Main.class);
 
-        GlobalConfig.init(new XmlConfigBackend(CONFIG_FILE), new XmlConfigParser());
+        config = new GlobalConfig(new XmlConfigBackend(new File("config.xml")), new XmlConfigParser());
 
-        LogConfig.GLOBAL_LOG_LEVEL = GlobalConfig.get(GlobalConfig.KEY_LOG_LEVEL, LogLevel.class, LogLevel.INFO);
+        LogConfig.GLOBAL_LOG_LEVEL = config.get(GlobalConfig.LOG_LEVEL);
 
-        LOGGER.info("Starting app with DeviceID {}", GlobalConfig.getDeviceId());
+        LOGGER.info("Starting app with DeviceID {}", config.get(GlobalConfig.DEVICE_ID));
 
         fileHandler = new FileHandler();
 
@@ -84,6 +86,8 @@ public class Main {
                     .computeIfAbsent(WORD_RESOURCE, k -> new ArrayList<>())
                     .add(LocalDateTime.now());
 
+            entries_changed = true;
+
             disp.setText(String.valueOf(counter));
         });
 
@@ -100,24 +104,25 @@ public class Main {
 
         Map<String, List<LocalDateTime>> loaded = null;
 
-        if (FileConstants.getTextFile().exists()) {
+        File f;
+        if ((f = config.getDataFile(FileConstants.TEXT_FILE)).exists()) {
             LOGGER.info("Found text file. Loading...");
-            loaded = fileHandler.load(FileConstants.getTextFile());
+            loaded = fileHandler.load(f);
             LOGGER.info("Deleting text file. Migrating...");
-            FileConstants.getTextFile().deleteOnExit();
-        } else if (FileConstants.getXmlFile().exists()) {
+            f.deleteOnExit();
+        } else if ((f = config.getDataFile(FileConstants.XML_FILE)).exists()) {
             LOGGER.info("Found xml file. Loading...");
-            loaded = fileHandler.load(FileConstants.getXmlFile());
+            loaded = fileHandler.load(f);
             LOGGER.info("Deleting xml file. Migrating...");
-            FileConstants.getXmlFile().deleteOnExit();
-        } else if (FileConstants.getDataFile().exists()) {
+            f.deleteOnExit();
+        } else if ((f = config.getDataFile(FileConstants.DATA_FILE)).exists()) {
             LOGGER.info("Found simple binary file. Loading...");
-            loaded = fileHandler.load(FileConstants.getDataFile());
+            loaded = fileHandler.load(f);
             LOGGER.info("Deleting simple binary file. Migrating...");
-            FileConstants.getDataFile().deleteOnExit();
-        } else if (FileConstants.getCompressedDataFile().exists()) {
+            f.deleteOnExit();
+        } else if ((f = config.getDataFile(FileConstants.COMPRESSED_DATA_FILE)).exists()) {
             LOGGER.info("Found compressed binary file. Loading...");
-            loaded = fileHandler.load(FileConstants.getCompressedDataFile());
+            loaded = fileHandler.load(f);
         }
 
         if (loaded != null) {
@@ -128,10 +133,19 @@ public class Main {
     }
 
     static void safe() {
+        if (!entries_changed) {
+            LOGGER.info("No changes detected. Abort saving...");
+            return;
+        }
+
         LOGGER.info("Trying to save to compressed binary file...");
         try {
-            fileHandler.save(entries, FileConstants.getCompressedDataFile(), FileType.BYTE_2);
-            LOGGER.info("Done saving to compressed binary file.");
+            if (entries_changed) {
+                fileHandler.save(entries,
+                        config.getDataFile(FileConstants.COMPRESSED_DATA_FILE),
+                        config.get(GlobalConfig.DATA_TYPE));
+                LOGGER.info("Done saving to compressed binary file.");
+            }
         } catch (Exception e) {
             LOGGER.error("Failed to save to compressed binary file", e);
         }
