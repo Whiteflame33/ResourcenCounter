@@ -23,6 +23,12 @@ public class SwingAppUiImpl implements IAppUi, ICounterListener {
         this.service = service;
         this.key = key;
         this.onSaveAction = onSaveAction;
+
+        try {
+            UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
+        } catch (Exception e) {
+            LOGGER.error("Failed to set look and feel", e);
+        }
     }
 
     @Override
