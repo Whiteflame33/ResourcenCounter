@@ -1,14 +1,15 @@
 package de.whiteflame.rescount;
 
+import de.whiteflame.rescount.api.app.IAppService;
 import de.whiteflame.rescount.api.config.IConfigBackend;
 import de.whiteflame.rescount.api.config.IConfigParser;
 import de.whiteflame.rescount.api.log.ILogger;
 import de.whiteflame.rescount.api.log.LogConfig;
 import de.whiteflame.rescount.api.log.LogLevel;
 import de.whiteflame.rescount.api.log.LoggerFactory;
-import de.whiteflame.rescount.api.service.ICounterListener;
 import de.whiteflame.rescount.api.service.ICounterService;
 import de.whiteflame.rescount.api.ui.IAppUi;
+import de.whiteflame.rescount.app.LocalAppService;
 import de.whiteflame.rescount.config.GlobalConfig;
 import de.whiteflame.rescount.io.FileConstants;
 import de.whiteflame.rescount.io.FileHandler;
@@ -24,22 +25,23 @@ import java.util.Map;
 public class CounterApp {
     private final ILogger LOGGER = LoggerFactory.getLogger(CounterApp.class);
 
-    private final ICounterService service;
+    private final IAppService service;
+    private final ICounterService coreService;
     private final FileHandler fileHandler;
     private final GlobalConfig config;
 
     private CounterApp(GlobalConfig config) {
         this.config = config;
-        this.service = new CounterService();
+        this.coreService = new CounterService();
         this.fileHandler = new FileHandler();
+        this.service = new LocalAppService(coreService, fileHandler, config);
     }
 
     public void start() {
         LOGGER.flog(LogLevel.INFO, "Starting App with ID {}", config.getAs(GlobalConfig.DEVICE_ID));
 
         loadData();
-        IAppUi ui = new SwingAppUiImpl(service, Main.WORD_RESOURCE, this::saveData);
-        service.addListener((ICounterListener) ui);
+        IAppUi ui = new SwingAppUiImpl(service, Main.WORD_RESOURCE, service::shutdown);
         SwingUtilities.invokeLater(ui::show);
     }
 
@@ -69,24 +71,7 @@ public class CounterApp {
 
         if (loaded != null) {
             LOGGER.info("Initializing loaded entries");
-            service.setEntries(loaded);
-        }
-    }
-
-    public void saveData() {
-        if (!service.hasChangedSince()) {
-            LOGGER.info("No changes. Abort saving...");
-            return;
-        }
-
-        LOGGER.info("Trying to save to compressed binary file...");
-        try {
-            fileHandler.save(service.getEntries(),
-                    config.getDataFile(FileConstants.COMPRESSED_DATA_FILE_EXT),
-                    config.getAs(GlobalConfig.DATA_TYPE));
-            LOGGER.info("Done saving to compressed binary file.");
-        } catch (Exception e) {
-            LOGGER.error("Failed to save to compressed binary file", e);
+            coreService.setEntries(loaded);
         }
     }
 

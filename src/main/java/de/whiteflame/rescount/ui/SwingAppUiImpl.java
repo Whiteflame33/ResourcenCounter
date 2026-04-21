@@ -1,28 +1,29 @@
 package de.whiteflame.rescount.ui;
 
-import de.whiteflame.rescount.api.service.ICounterService;
+import de.whiteflame.rescount.api.app.IAppService;
 import de.whiteflame.rescount.api.log.ILogger;
 import de.whiteflame.rescount.api.log.LoggerFactory;
-import de.whiteflame.rescount.api.service.ICounterListener;
 import de.whiteflame.rescount.api.ui.IAppUi;
 
 import javax.swing.*;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 
-public class SwingAppUiImpl implements IAppUi, ICounterListener {
+public class SwingAppUiImpl implements IAppUi, IAppService.IAppListener {
     private static final ILogger LOGGER = LoggerFactory.getLogger(SwingAppUiImpl.class);
 
-    private final ICounterService service;
+    private final IAppService service;
     private final String key;
     private final Runnable onSaveAction;
 
     private JLabel display;
 
-    public SwingAppUiImpl(ICounterService service, String key, Runnable onSaveAction) {
+    public SwingAppUiImpl(IAppService service, String key, Runnable onSaveAction) {
         this.service = service;
         this.key = key;
         this.onSaveAction = onSaveAction;
+
+        this.service.addListener(this);
     }
 
     @Override
@@ -59,6 +60,7 @@ public class SwingAppUiImpl implements IAppUi, ICounterListener {
         frame.addWindowListener(new WindowAdapter() {
             @Override
             public void windowClosing(WindowEvent e) {
+                service.shutdown();
                 onSaveAction.run();
                 frame.dispose();
                 System.exit(0);
