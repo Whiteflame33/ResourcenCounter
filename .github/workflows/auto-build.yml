@@ -3,10 +3,6 @@ name: Auto Build
 on:
   push:
 
-concurrency:
-  group: auto-build
-  cancel-in-progress: false
-
 jobs:
   build:
     strategy:
