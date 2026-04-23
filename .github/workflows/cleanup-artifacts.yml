@@ -1,0 +1,14 @@
+name: Clean old artifacts
+on:
+  schedule:
+    - cron: '0 0 * * *'
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Remove old artifacts
+        uses: c-hive/gha-remove-artifacts@v1
+        with:
+          age: '2 day'
+          skip-recent: 1
+
